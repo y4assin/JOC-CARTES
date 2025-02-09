@@ -53,8 +53,22 @@ class JuegoCartas {
             'J': 11, 'Q': 12, 'K': 13, 'A': 14
         };
         
-        if (valores[carta1.valor] === valores[carta2.valor]) return 'empate';
-        return valores[carta1.valor] > valores[carta2.valor] ? 0 : 1;
+        console.log('Comparando cartas:', {
+            jugador1: `${carta1.valor}-${carta1.palo}`,
+            jugador2: `${carta2.valor}-${carta2.palo}`,
+            valor1: valores[carta1.valor],
+            valor2: valores[carta2.valor]
+        });
+
+        if (valores[carta1.valor] === valores[carta2.valor]) {
+            return 'empate';
+        }
+        
+        if (valores[carta1.valor] > valores[carta2.valor]) {
+            return 0;  // Gana jugador 1
+        } else {
+            return 1;  // Gana jugador 2
+        }
     }
 }
 
@@ -117,6 +131,12 @@ wss.on('connection', (ws) => {
                 const carta1 = juego.cartasSeleccionadas.get(0);
                 const carta2 = juego.cartasSeleccionadas.get(1);
                 const resultado = juego.determinarGanador(carta1, carta2);
+                
+                console.log('Resultado:', {
+                    carta1: `${carta1.valor}-${carta1.palo}`,
+                    carta2: `${carta2.valor}-${carta2.palo}`,
+                    ganador: resultado
+                });
                 
                 juego.jugadores.forEach((jugador) => {
                     jugador.send(JSON.stringify({
