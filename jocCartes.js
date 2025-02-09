@@ -73,7 +73,8 @@ wss.on('connection', (ws) => {
 
     ws.send(JSON.stringify({ 
         tipo: 'conexion', 
-        jugadorId: jugadorId 
+        jugadorId: jugadorId,
+        turnoActual: juego.turnoActual
     }));
 
     if (juego.jugadores.length === 2) {
@@ -81,7 +82,8 @@ wss.on('connection', (ws) => {
         juego.jugadores.forEach((jugador, id) => {
             jugador.send(JSON.stringify({
                 tipo: 'inicioJuego',
-                mano: manos[id]
+                mano: manos[id],
+                turnoActual: juego.turnoActual
             }));
         });
     }
@@ -90,7 +92,26 @@ wss.on('connection', (ws) => {
         const data = JSON.parse(mensaje);
         
         if (data.tipo === 'seleccionCarta') {
+            if (ws.jugadorId !== juego.turnoActual) {
+                ws.send(JSON.stringify({
+                    tipo: 'error',
+                    mensaje: 'No es tu turno'
+                }));
+                return;
+            }
+
             juego.cartasSeleccionadas.set(ws.jugadorId, data.carta);
+            
+            // Cambiar turno
+            juego.turnoActual = (juego.turnoActual + 1) % 2;
+            
+            // Notificar a todos del cambio de turno
+            juego.jugadores.forEach((jugador) => {
+                jugador.send(JSON.stringify({
+                    tipo: 'cambioTurno',
+                    turnoActual: juego.turnoActual
+                }));
+            });
             
             if (juego.cartasSeleccionadas.size === 2) {
                 const carta1 = juego.cartasSeleccionadas.get(0);
@@ -109,6 +130,7 @@ wss.on('connection', (ws) => {
                 });
                 
                 juego.cartasSeleccionadas.clear();
+                juego.turnoActual = 0; // Reiniciar turno para la siguiente ronda
             }
         }
     });

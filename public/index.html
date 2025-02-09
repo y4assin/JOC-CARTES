@@ -45,23 +45,38 @@
     <script>
         const ws = new WebSocket('ws://localhost:3000');
         let miJugadorId = null;
+        let esMiTurno = false;
         
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
             if (data.tipo === 'conexion') {
                 miJugadorId = data.jugadorId;
+                esMiTurno = data.turnoActual === miJugadorId;
                 document.getElementById('estadoJuego').textContent = 
                     `Eres el Jugador ${miJugadorId + 1}. ${miJugadorId === 0 ? 'Esperando oponente...' : ''}`;
             }
             else if (data.tipo === 'inicioJuego') {
                 mostrarCartas(data.mano);
-                document.getElementById('estadoJuego').textContent = 'Juego iniciado - Selecciona una carta';
-            } 
+                esMiTurno = data.turnoActual === miJugadorId;
+                actualizarEstado();
+            }
+            else if (data.tipo === 'cambioTurno') {
+                esMiTurno = data.turnoActual === miJugadorId;
+                actualizarEstado();
+            }
             else if (data.tipo === 'resultado') {
                 mostrarResultado(data);
             }
+            else if (data.tipo === 'error') {
+                alert(data.mensaje);
+            }
         };
+
+        function actualizarEstado() {
+            document.getElementById('estadoJuego').textContent = 
+                esMiTurno ? 'Tu turno - Selecciona una carta' : 'Turno del oponente';
+        }
 
         function mostrarCartas(mano) {
             const tusCartas = document.getElementById('tusCartas');
@@ -69,7 +84,13 @@
             
             mano.forEach(carta => {
                 const cartaElement = crearElementoCarta(carta);
-                cartaElement.onclick = () => seleccionarCarta(carta);
+                cartaElement.onclick = () => {
+                    if (esMiTurno) {
+                        seleccionarCarta(carta);
+                    } else {
+                        alert('No es tu turno');
+                    }
+                };
                 tusCartas.appendChild(cartaElement);
             });
 
