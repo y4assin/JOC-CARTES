@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Cartas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="min-h-screen bg-green-800 p-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="relative h-[600px] bg-green-700 rounded-[100px] shadow-2xl border-8 border-brown-900 p-8">
+                
+                <!-- Cartas del oponente -->
+                <div class="absolute top-4 left-1/2 transform -translate-x-1/2">
+                    <div class="flex gap-4" id="cartasOponente">
+                        <!-- Cartas del oponente -->
+                    </div>
+                </div>
+
+                <!-- Centro de la mesa -->
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <div class="flex gap-4" id="cartasCentro">
+                        <!-- Cartas jugadas -->
+                    </div>
+                </div>
+
+                <!-- Tus cartas -->
+                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                    <div class="flex gap-4" id="tusCartas">
+                        <!-- Tus cartas -->
+                    </div>
+                </div>
+
+                <!-- Estado del juego -->
+                <div class="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-4 rounded-xl">
+                    <h2 class="text-xl font-bold mb-2">Estado del Juego</h2>
+                    <p id="estadoJuego">Esperando jugadores...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:3000');
+        let miJugadorId = null;
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.tipo === 'conexion') {
+                miJugadorId = data.jugadorId;
+                document.getElementById('estadoJuego').textContent = 
+                    `Eres el Jugador ${miJugadorId + 1}. ${miJugadorId === 0 ? 'Esperando oponente...' : ''}`;
+            }
+            else if (data.tipo === 'inicioJuego') {
+                mostrarCartas(data.mano);
+                document.getElementById('estadoJuego').textContent = 'Juego iniciado - Selecciona una carta';
+            } 
+            else if (data.tipo === 'resultado') {
+                mostrarResultado(data);
+            }
+        };
+
+        function mostrarCartas(mano) {
+            const tusCartas = document.getElementById('tusCartas');
+            tusCartas.innerHTML = '';
+            
+            mano.forEach(carta => {
+                const cartaElement = crearElementoCarta(carta);
+                cartaElement.onclick = () => seleccionarCarta(carta);
+                tusCartas.appendChild(cartaElement);
+            });
+
+            // Mostrar cartas del oponente (volteadas)
+            const cartasOponente = document.getElementById('cartasOponente');
+            cartasOponente.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const cartaVolteada = document.createElement('div');
+                cartaVolteada.className = 'carta w-32 h-48 volteada';
+                cartaVolteada.innerHTML = `
+                    <div class="carta-inner">
+                        <div class="carta-dorso">
+                            <img src="/cards/BACK.png" alt="dorso" class="w-full h-full rounded-xl">
+                        </div>
+                    </div>
+                `;
+                cartasOponente.appendChild(cartaVolteada);
+            }
+        }
+
+        function crearElementoCarta(carta) {
+            const div = document.createElement('div');
+            div.className = 'carta w-32 h-48 hover:cursor-pointer';
+            div.innerHTML = `
+                <div class="carta-inner">
+                    <div class="carta-frente">
+                        <img src="${carta.imagen}" alt="carta" class="w-full h-full rounded-xl">
+                    </div>
+                </div>
+            `;
+            return div;
+        }
+
+        function seleccionarCarta(carta) {
+            ws.send(JSON.stringify({
+                tipo: 'seleccionCarta',
+                carta: carta
+            }));
+        }
+
+        function mostrarResultado(data) {
+            const cartasCentro = document.getElementById('cartasCentro');
+            cartasCentro.innerHTML = `
+                <div class="carta w-32 h-48">
+                    <div class="carta-inner">
+                        <img src="${data.cartas.jugador0.imagen}" alt="carta jugador 1" class="w-full h-full rounded-xl">
+                    </div>
+                </div>
+                <div class="carta w-32 h-48">
+                    <div class="carta-inner">
+                        <img src="${data.cartas.jugador1.imagen}" alt="carta jugador 2" class="w-full h-full rounded-xl">
+                    </div>
+                </div>
+            `;
+            
+            const resultado = data.ganador === 'empate' ? 
+                '¡Empate!' : 
+                `Ganador: Jugador ${data.ganador + 1}`;
+            document.getElementById('estadoJuego').textContent = resultado;
+        }
+    </script>
+</body>
+</html>
