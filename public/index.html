@@ -39,35 +39,51 @@
     </div>
 
     <script>
+        // Conexión WebSocket con manejo de errores
         const ws = new WebSocket('wss://joc.yassineelbakali.com');
         let miJugadorId = null;
         let esMiTurno = false;
-        
-        // Función para mostrar bienvenida
-        async function mostrarBienvenida() {
-            const result = await Swal.fire({
-                title: '¡Bienvenido al Juego de Cartas!',
-                text: '¿Estás listo para jugar?',
-                icon: 'success',
-                confirmButtonText: '¡Empezar!',
-                allowOutsideClick: false,
-                background: '#1a472a',
-                color: '#fff',
-                confirmButtonColor: '#2d6a4f'
-            });
-        }
 
-        // Mostrar bienvenida al cargar la página
-        mostrarBienvenida();
-        
+        ws.onopen = () => {
+            console.log('Conectado al servidor WebSocket');
+        };
+
+        ws.onerror = (error) => {
+            console.error('Error en WebSocket:', error);
+            Swal.fire({
+                title: 'Error de conexión',
+                text: 'No se pudo conectar al servidor',
+                icon: 'error',
+                confirmButtonText: 'Reintentar',
+                background: '#1a472a',
+                color: '#fff'
+            }).then(() => {
+                window.location.reload();
+            });
+        };
+
+        ws.onclose = () => {
+            console.log('Conexión cerrada');
+            Swal.fire({
+                title: 'Conexión perdida',
+                text: 'Se perdió la conexión con el servidor',
+                icon: 'warning',
+                confirmButtonText: 'Reconectar',
+                background: '#1a472a',
+                color: '#fff'
+            }).then(() => {
+                window.location.reload();
+            });
+        };
+
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
+            console.log('Mensaje recibido:', data); // Debug
             
             switch(data.tipo) {
                 case 'conexion':
                     miJugadorId = data.jugadorId;
                     esMiTurno = data.turnoActual === miJugadorId;
-                    
                     if (miJugadorId === 0) {
                         Swal.fire({
                             title: 'Esperando oponente',
@@ -78,27 +94,41 @@
                             background: '#1a472a',
                             color: '#fff'
                         });
+                    } else {
+                        Swal.fire({
+                            title: '¡Partida lista!',
+                            text: 'Eres el Jugador 2',
+                            icon: 'success',
+                            timer: 1500,
+                            background: '#1a472a',
+                            color: '#fff'
+                        });
                     }
-                    actualizarEstado();
                     break;
 
                 case 'inicioJuego':
-                    Swal.close(); // Cerrar el mensaje de espera si está visible
-                    
-                    // Mostrar mensaje de inicio para ambos jugadores
-                    Swal.fire({
-                        title: '¡Partida lista!',
-                        text: `Eres el Jugador ${miJugadorId + 1}`,
-                        icon: 'success',
-                        timer: 1500,
-                        showConfirmButton: false,
-                        background: '#1a472a',
-                        color: '#fff'
-                    });
-
+                    console.log('Iniciando juego...'); // Debug
+                    Swal.close();
                     mostrarCartas(data.mano);
                     esMiTurno = data.turnoActual === miJugadorId;
                     actualizarEstado();
+                    break;
+
+                case 'resultado':
+                    mostrarResultado(data);
+                    Swal.fire({
+                        title: data.ganador === 'empate' ? '¡Empate!' : 
+                               `¡Gana Jugador ${data.ganador + 1}!`,
+                        text: data.ganador === miJugadorId ? '¡Has ganado!' : 
+                              data.ganador === 'empate' ? 'Nadie gana' : 'Has perdido',
+                        icon: data.ganador === miJugadorId ? 'success' : 
+                              data.ganador === 'empate' ? 'info' : 'error',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: '#1a472a',
+                        color: '#fff',
+                        position: 'top'
+                    });
                     break;
 
                 case 'cambioTurno':
@@ -119,26 +149,6 @@
                             title: '¡Tu turno!'
                         });
                     }
-                    break;
-
-                case 'resultado':
-                    const resultado = data.ganador === 'empate' ? 
-                        '¡Empate!' : 
-                        `¡Gana Jugador ${data.ganador + 1}!`;
-                    
-                    mostrarResultado(data);
-                    
-                    Swal.fire({
-                        title: resultado,
-                        text: 'Preparando siguiente ronda...',
-                        icon: data.ganador === miJugadorId ? 'success' : 
-                              data.ganador === 'empate' ? 'info' : 'error',
-                        timer: 1500,
-                        showConfirmButton: false,
-                        background: '#1a472a',
-                        color: '#fff',
-                        position: 'top'
-                    });
                     break;
 
                 case 'error':

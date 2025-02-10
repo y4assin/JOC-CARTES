@@ -4,7 +4,11 @@ const path = require('path');
 
 const app = express();
 const server = require('http').createServer(app);
+const PORT = process.env.PORT || 3001;
+
 const wss = new WebSocket.Server({ server });
+
+console.log(`Servidor WebSocket iniciado en puerto ${PORT}`);
 
 app.use(express.static('public'));
 
@@ -15,6 +19,7 @@ class JuegoCartas {
         this.cartasSeleccionadas = new Map();
         this.turnoActual = 0;
         this.inicializarBaraja();
+        this.mezclarBaraja();
     }
 
     inicializarBaraja() {
@@ -75,55 +80,55 @@ class JuegoCartas {
 const juego = new JuegoCartas();
 
 wss.on('connection', (ws) => {
+    console.log('Nueva conexión establecida');
+    
     if (juego.jugadores.length >= 2) {
-        ws.send(JSON.stringify({ tipo: 'error', mensaje: 'Partida llena' }));
+        console.log('Partida llena');
+        ws.send(JSON.stringify({
+            tipo: 'error',
+            mensaje: 'La partida está llena'
+        }));
         ws.close();
         return;
     }
 
-    const jugadorId = juego.jugadores.length;
+    ws.jugadorId = juego.jugadores.length;
     juego.jugadores.push(ws);
-    ws.jugadorId = jugadorId;
+    console.log(`Jugador ${ws.jugadorId + 1} conectado`);
 
-    ws.send(JSON.stringify({ 
-        tipo: 'conexion', 
-        jugadorId: jugadorId,
+    ws.send(JSON.stringify({
+        tipo: 'conexion',
+        jugadorId: ws.jugadorId,
         turnoActual: juego.turnoActual
     }));
 
     if (juego.jugadores.length === 2) {
-        repartirNuevaRonda();
+        console.log('Iniciando partida...');
+        const manos = juego.repartirCartas();
+        juego.jugadores.forEach((jugador, id) => {
+            jugador.send(JSON.stringify({
+                tipo: 'inicioJuego',
+                mano: manos[id],
+                turnoActual: juego.turnoActual
+            }));
+        });
     }
 
-    ws.on('message', (mensaje) => {
-        const data = JSON.parse(mensaje);
-        
-        if (data.tipo === 'seleccionCarta') {
-            if (ws.jugadorId !== juego.turnoActual) {
-                ws.send(JSON.stringify({
-                    tipo: 'error',
-                    mensaje: 'No es tu turno'
-                }));
-                return;
-            }
+    ws.on('message', (message) => {
+        const data = JSON.parse(message);
+        console.log('Mensaje recibido:', data); // Debug
 
+        if (data.tipo === 'seleccionCarta') {
             juego.cartasSeleccionadas.set(ws.jugadorId, data.carta);
-            
             juego.turnoActual = (juego.turnoActual + 1) % 2;
-            
-            juego.jugadores.forEach((jugador) => {
-                jugador.send(JSON.stringify({
-                    tipo: 'cambioTurno',
-                    turnoActual: juego.turnoActual
-                }));
-            });
-            
+
             if (juego.cartasSeleccionadas.size === 2) {
                 const carta1 = juego.cartasSeleccionadas.get(0);
                 const carta2 = juego.cartasSeleccionadas.get(1);
                 const resultado = juego.determinarGanador(carta1, carta2);
-                
-                // Primero solo enviamos el resultado
+
+                console.log('Resultado:', resultado); // Debug
+
                 juego.jugadores.forEach((jugador) => {
                     jugador.send(JSON.stringify({
                         tipo: 'resultado',
@@ -135,13 +140,12 @@ wss.on('connection', (ws) => {
                     }));
                 });
 
-                // Esperamos 2 segundos para mostrar el resultado
+                // Reiniciar para nueva ronda
                 setTimeout(() => {
                     juego.cartasSeleccionadas.clear();
                     juego.turnoActual = 0;
                     const nuevasManos = juego.repartirCartas();
                     
-                    // Luego enviamos las nuevas cartas
                     juego.jugadores.forEach((jugador, id) => {
                         jugador.send(JSON.stringify({
                             tipo: 'nuevaRonda',
@@ -154,34 +158,28 @@ wss.on('connection', (ws) => {
         }
     });
 
-    function repartirNuevaRonda() {
-        const manos = juego.repartirCartas();
-        juego.jugadores.forEach((jugador, id) => {
-            jugador.send(JSON.stringify({
-                tipo: 'nuevaRonda',
-                mano: manos[id],
-                turnoActual: juego.turnoActual
-            }));
-        });
-    }
-
     ws.on('close', () => {
-        juego.jugadores = juego.jugadores.filter(j => j !== ws);
-        juego.cartasSeleccionadas.delete(ws.jugadorId);
-        
-        // Notificar a los jugadores restantes
-        juego.jugadores.forEach((jugador) => {
-            jugador.send(JSON.stringify({
-                tipo: 'jugadorDesconectado',
-                mensaje: 'El otro jugador se ha desconectado'
-            }));
-        });
+        console.log(`Jugador ${ws.jugadorId + 1} desconectado`);
+        const index = juego.jugadores.indexOf(ws);
+        if (index > -1) {
+            juego.jugadores.splice(index, 1);
+        }
     });
 });
 
-const PORT = process.env.PORT || 3001;
+// Iniciar el servidor HTTP
 server.listen(PORT, () => {
-    console.log(`Servidor iniciado en puerto ${PORT}`);
+    console.log(`Servidor WebSocket iniciado en puerto ${PORT}`);
+});
+
+// Manejar errores del servidor
+server.on('error', (error) => {
+    console.error('Error en el servidor:', error);
+});
+
+// Manejar errores de WebSocket
+wss.on('error', (error) => {
+    console.error('Error en WebSocket:', error);
 });
 
 app.get('/', (req, res) => {
