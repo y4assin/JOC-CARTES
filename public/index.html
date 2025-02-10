@@ -8,27 +8,27 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-gradient-to-b from-green-900 to-green-700 h-screen overflow-hidden">
-    <div class="h-screen flex flex-col p-4">
+    <div class="h-screen flex flex-col gap-1 p-1">
         <!-- Estado del juego -->
-        <div class="bg-black bg-opacity-80 text-white p-3 rounded-xl mb-4 w-fit mx-auto">
-            <p id="estadoJuego" class="text-center text-lg font-semibold">Esperando jugadores...</p>
+        <div class="bg-black bg-opacity-80 text-white p-1.5 rounded-xl w-fit mx-auto">
+            <p id="estadoJuego" class="text-center text-base font-semibold">Esperando jugadores...</p>
         </div>
 
         <!-- Mesa de juego -->
-        <div class="relative bg-green-700 rounded-3xl shadow-2xl border-8 border-brown-900 flex-grow">
+        <div class="bg-green-700 rounded-2xl shadow-2xl border-2 border-brown-900 flex-1 flex flex-col justify-between p-2">
             <!-- Cartas del oponente -->
-            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 w-full px-4">
-                <div class="flex justify-center gap-2" id="cartasOponente"></div>
+            <div class="w-full flex-none">
+                <div class="flex justify-center flex-wrap gap-1" id="cartasOponente"></div>
             </div>
 
             <!-- Centro de la mesa -->
-            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full px-4">
-                <div class="flex justify-center gap-2" id="cartasCentro"></div>
+            <div class="w-full flex-1 flex items-center justify-center min-h-[100px]">
+                <div class="flex justify-center gap-1" id="cartasCentro"></div>
             </div>
 
             <!-- Tus cartas -->
-            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-full px-4">
-                <div class="flex justify-center gap-2" id="tusCartas"></div>
+            <div class="w-full flex-none">
+                <div class="flex justify-center flex-wrap gap-1" id="tusCartas"></div>
             </div>
         </div>
     </div>
@@ -149,18 +149,23 @@
 
         function mostrarResultado(data) {
             const cartasCentro = document.getElementById('cartasCentro');
-            cartasCentro.innerHTML = `
-                <div class="carta w-32 h-48">
+            // Limpiamos primero el centro
+            cartasCentro.innerHTML = '';
+            
+            // Añadimos las cartas con una animación
+            const cartasHTML = `
+                <div class="carta w-32 h-48 resultado-carta">
                     <div class="carta-inner">
                         <img src="${data.cartas.jugador0.imagen}" alt="carta jugador 1" class="w-full h-full rounded-xl">
                     </div>
                 </div>
-                <div class="carta w-32 h-48">
+                <div class="carta w-32 h-48 resultado-carta">
                     <div class="carta-inner">
                         <img src="${data.cartas.jugador1.imagen}" alt="carta jugador 2" class="w-full h-full rounded-xl">
                     </div>
                 </div>
             `;
+            cartasCentro.innerHTML = cartasHTML;
             
             const resultado = data.ganador === 'empate' ? 
                 '¡Empate!' : 
