@@ -45,11 +45,14 @@ class JuegoCartas {
     }
 
     repartirCartas() {
+        this.inicializarBaraja();  // Reiniciar baraja en cada reparto
         this.mezclarBaraja();
-        return [
-            this.baraja.slice(0, 5),
-            this.baraja.slice(5, 10)
-        ];
+        const manos = [[], []];
+        for (let i = 0; i < 5; i++) {
+            manos[0].push(this.baraja.pop());
+            manos[1].push(this.baraja.pop());
+        }
+        return manos;
     }
 
     determinarGanador(carta1, carta2) {
@@ -96,15 +99,19 @@ wss.on('connection', (ws) => {
     juego.jugadores.push(ws);
     console.log(`Jugador ${ws.jugadorId + 1} conectado`);
 
+    // Enviar estado inicial al jugador
     ws.send(JSON.stringify({
         tipo: 'conexion',
         jugadorId: ws.jugadorId,
         turnoActual: juego.turnoActual
     }));
 
+    // Si tenemos 2 jugadores, iniciar el juego
     if (juego.jugadores.length === 2) {
         console.log('Iniciando partida...');
         const manos = juego.repartirCartas();
+        juego.turnoActual = 0; // Asegurar que empiece el jugador 1
+        
         juego.jugadores.forEach((jugador, id) => {
             jugador.send(JSON.stringify({
                 tipo: 'inicioJuego',
@@ -116,18 +123,35 @@ wss.on('connection', (ws) => {
 
     ws.on('message', (message) => {
         const data = JSON.parse(message);
-        console.log('Mensaje recibido:', data); // Debug
+        console.log('Mensaje recibido:', data);
 
         if (data.tipo === 'seleccionCarta') {
+            // Verificar que sea el turno del jugador
+            if (ws.jugadorId !== juego.turnoActual) {
+                ws.send(JSON.stringify({
+                    tipo: 'error',
+                    mensaje: 'No es tu turno'
+                }));
+                return;
+            }
+
             juego.cartasSeleccionadas.set(ws.jugadorId, data.carta);
             juego.turnoActual = (juego.turnoActual + 1) % 2;
+
+            // Notificar a todos del cambio de turno
+            juego.jugadores.forEach((jugador) => {
+                jugador.send(JSON.stringify({
+                    tipo: 'cambioTurno',
+                    turnoActual: juego.turnoActual
+                }));
+            });
 
             if (juego.cartasSeleccionadas.size === 2) {
                 const carta1 = juego.cartasSeleccionadas.get(0);
                 const carta2 = juego.cartasSeleccionadas.get(1);
                 const resultado = juego.determinarGanador(carta1, carta2);
 
-                console.log('Resultado:', resultado); // Debug
+                console.log('Resultado de la ronda:', resultado);
 
                 juego.jugadores.forEach((jugador) => {
                     jugador.send(JSON.stringify({
@@ -140,7 +164,7 @@ wss.on('connection', (ws) => {
                     }));
                 });
 
-                // Reiniciar para nueva ronda
+                // Nueva ronda después de mostrar resultado
                 setTimeout(() => {
                     juego.cartasSeleccionadas.clear();
                     juego.turnoActual = 0;
@@ -163,7 +187,16 @@ wss.on('connection', (ws) => {
         const index = juego.jugadores.indexOf(ws);
         if (index > -1) {
             juego.jugadores.splice(index, 1);
+            // Notificar al otro jugador
+            if (juego.jugadores.length > 0) {
+                juego.jugadores[0].send(JSON.stringify({
+                    tipo: 'oponenteDesconectado'
+                }));
+            }
         }
+        // Reiniciar el juego
+        juego.cartasSeleccionadas.clear();
+        juego.turnoActual = 0;
     });
 });
 
