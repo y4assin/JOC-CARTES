@@ -278,12 +278,39 @@ ws.onclose = () => {
             const tusCartas = document.getElementById('tusCartas');
             tusCartas.innerHTML = '';
             
-            mano.forEach(carta => {
-                const cartaElement = crearElementoCarta(carta);
-                cartaElement.onclick = () => seleccionarCarta(carta);
+            mano.forEach((carta, index) => {
+                const cartaElement = document.createElement('div');
+                cartaElement.className = 'carta volteada';
+                cartaElement.innerHTML = `
+                    <div class="carta-inner">
+                        <div class="carta-dorso">
+                            <img src="/cards/BACK.png" alt="dorso" class="w-full h-full rounded-xl">
+                        </div>
+                        <div class="carta-frente" style="display: none;">
+                            <img src="${carta.imagen}" alt="carta" class="w-full h-full rounded-xl">
+                        </div>
+                    </div>
+                `;
+                
+                cartaElement.onclick = () => {
+                    if (esMiTurno) {
+                        // Mostrar brevemente la carta antes de seleccionarla
+                        const frenteElement = cartaElement.querySelector('.carta-frente');
+                        const dorsoElement = cartaElement.querySelector('.carta-dorso');
+                        
+                        dorsoElement.style.display = 'none';
+                        frenteElement.style.display = 'block';
+                        
+                        setTimeout(() => {
+                            seleccionarCarta(carta);
+                        }, 500);
+                    }
+                };
+                
                 tusCartas.appendChild(cartaElement);
             });
 
+            // Mantener el código existente para las cartas del oponente
             const cartasOponente = document.getElementById('cartasOponente');
             cartasOponente.innerHTML = '';
             for (let i = 0; i < 5; i++) {

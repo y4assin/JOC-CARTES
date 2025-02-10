@@ -45,12 +45,16 @@ class JuegoCartas {
     }
 
     repartirCartas() {
-        this.inicializarBaraja();  // Reiniciar baraja en cada reparto
+        this.inicializarBaraja();
         this.mezclarBaraja();
         const manos = [[], []];
         for (let i = 0; i < 5; i++) {
-            manos[0].push(this.baraja.pop());
-            manos[1].push(this.baraja.pop());
+            const carta1 = this.baraja.pop();
+            const carta2 = this.baraja.pop();
+            carta1.oculta = true;
+            carta2.oculta = true;
+            manos[0].push(carta1);
+            manos[1].push(carta2);
         }
         return manos;
     }
