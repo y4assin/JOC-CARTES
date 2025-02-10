@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Juego de Cartas</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-gradient-to-b from-green-900 to-green-700 h-screen overflow-hidden">
@@ -38,6 +39,23 @@
         let miJugadorId = null;
         let esMiTurno = false;
         
+        // Función para mostrar bienvenida
+        async function mostrarBienvenida() {
+            const result = await Swal.fire({
+                title: '¡Bienvenido al Juego de Cartas!',
+                text: '¿Estás listo para jugar?',
+                icon: 'success',
+                confirmButtonText: '¡Empezar!',
+                allowOutsideClick: false,
+                background: '#1a472a',
+                color: '#fff',
+                confirmButtonColor: '#2d6a4f'
+            });
+        }
+
+        // Mostrar bienvenida al cargar la página
+        mostrarBienvenida();
+        
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
@@ -45,25 +63,35 @@
                 case 'conexion':
                     miJugadorId = data.jugadorId;
                     esMiTurno = data.turnoActual === miJugadorId;
-                    document.getElementById('estadoJuego').textContent = 
-                        `Jugador ${miJugadorId + 1} ${miJugadorId === 0 ? '- Esperando oponente' : ''}`;
-                    break;
-
-                case 'inicioJuego':
-                    mostrarCartas(data.mano);
-                    esMiTurno = data.turnoActual === miJugadorId;
+                    
+                    if (miJugadorId === 0) {
+                        Swal.fire({
+                            title: 'Esperando oponente',
+                            text: 'Eres el Jugador 1',
+                            icon: 'info',
+                            showConfirmButton: false,
+                            allowOutsideClick: false,
+                            background: '#1a472a',
+                            color: '#fff'
+                        });
+                    }
                     actualizarEstado();
                     break;
 
-                case 'resultado':
-                    mostrarResultado(data);
-                    // Limpiar las cartas del oponente
-                    document.getElementById('cartasOponente').innerHTML = '';
-                    break;
+                case 'inicioJuego':
+                    Swal.close(); // Cerrar el mensaje de espera si está visible
+                    
+                    // Mostrar mensaje de inicio para ambos jugadores
+                    Swal.fire({
+                        title: '¡Partida lista!',
+                        text: `Eres el Jugador ${miJugadorId + 1}`,
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false,
+                        background: '#1a472a',
+                        color: '#fff'
+                    });
 
-                case 'nuevaRonda':
-                    // Limpiar el centro de la mesa
-                    document.getElementById('cartasCentro').innerHTML = '';
                     mostrarCartas(data.mano);
                     esMiTurno = data.turnoActual === miJugadorId;
                     actualizarEstado();
@@ -72,25 +100,77 @@
                 case 'cambioTurno':
                     esMiTurno = data.turnoActual === miJugadorId;
                     actualizarEstado();
+                    if (esMiTurno) {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top',
+                            showConfirmButton: false,
+                            timer: 1500,
+                            background: '#1a472a',
+                            color: '#fff'
+                        });
+
+                        Toast.fire({
+                            icon: 'info',
+                            title: '¡Tu turno!'
+                        });
+                    }
                     break;
 
-                case 'jugadorDesconectado':
-                    alert(data.mensaje);
-                    location.reload();
+                case 'resultado':
+                    const resultado = data.ganador === 'empate' ? 
+                        '¡Empate!' : 
+                        `¡Gana Jugador ${data.ganador + 1}!`;
+                    
+                    mostrarResultado(data);
+                    
+                    Swal.fire({
+                        title: resultado,
+                        text: 'Preparando siguiente ronda...',
+                        icon: data.ganador === miJugadorId ? 'success' : 
+                              data.ganador === 'empate' ? 'info' : 'error',
+                        timer: 1500,
+                        showConfirmButton: false,
+                        background: '#1a472a',
+                        color: '#fff',
+                        position: 'top'
+                    });
                     break;
 
                 case 'error':
-                    alert(data.mensaje);
+                    Swal.fire({
+                        title: '¡Error!',
+                        text: data.mensaje,
+                        icon: 'error',
+                        background: '#1a472a',
+                        color: '#fff'
+                    });
+                    break;
+
+                case 'jugadorDesconectado':
+                    Swal.fire({
+                        title: '¡Jugador desconectado!',
+                        text: 'El otro jugador ha abandonado la partida',
+                        icon: 'warning',
+                        confirmButtonText: 'Reiniciar',
+                        allowOutsideClick: false,
+                        background: '#1a472a',
+                        color: '#fff'
+                    }).then(() => {
+                        location.reload();
+                    });
                     break;
             }
         };
 
         function actualizarEstado() {
             const estado = document.getElementById('estadoJuego');
-            if (esMiTurno) {
-                estado.textContent = '🎮 Tu turno - Selecciona una carta';
+            if (miJugadorId === 0 && !esMiTurno && document.getElementById('tusCartas').children.length === 0) {
+                estado.textContent = 'Esperando oponente...';
+            } else if (esMiTurno) {
+                estado.textContent = '🎮 Tu turno';
             } else {
-                estado.textContent = '⌛ Esperando al oponente';
+                estado.textContent = '⌛ Turno del oponente';
             }
         }
 
@@ -100,22 +180,15 @@
             
             mano.forEach(carta => {
                 const cartaElement = crearElementoCarta(carta);
-                cartaElement.onclick = () => {
-                    if (esMiTurno) {
-                        seleccionarCarta(carta);
-                    } else {
-                        alert('No es tu turno');
-                    }
-                };
+                cartaElement.onclick = () => seleccionarCarta(carta);
                 tusCartas.appendChild(cartaElement);
             });
 
-            // Mostrar cartas del oponente (volteadas)
             const cartasOponente = document.getElementById('cartasOponente');
             cartasOponente.innerHTML = '';
             for (let i = 0; i < 5; i++) {
                 const cartaVolteada = document.createElement('div');
-                cartaVolteada.className = 'carta w-32 h-48 volteada';
+                cartaVolteada.className = 'carta volteada';
                 cartaVolteada.innerHTML = `
                     <div class="carta-inner">
                         <div class="carta-dorso">
@@ -140,11 +213,61 @@
             return div;
         }
 
-        function seleccionarCarta(carta) {
-            ws.send(JSON.stringify({
-                tipo: 'seleccionCarta',
-                carta: carta
-            }));
+        // Función para confirmar selección de carta
+        async function seleccionarCarta(carta) {
+            if (!esMiTurno) {
+                Swal.fire({
+                    title: '¡No es tu turno!',
+                    icon: 'warning',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    background: '#1a472a',
+                    color: '#fff',
+                    position: 'top'
+                });
+                return;
+            }
+
+            const result = await Swal.fire({
+                title: '¿Jugar esta carta?',
+                imageUrl: carta.imagen,
+                imageWidth: 100,
+                imageHeight: 140,
+                showCancelButton: true,
+                confirmButtonText: 'Jugar',
+                cancelButtonText: 'Cancelar',
+                background: '#1a472a',
+                color: '#fff',
+                confirmButtonColor: '#2d6a4f',
+                cancelButtonColor: '#9c4141'
+            });
+
+            if (result.isConfirmed) {
+                // Inmediatamente actualizamos el estado local
+                esMiTurno = false;
+                actualizarEstado();
+                
+                // Enviamos la carta
+                ws.send(JSON.stringify({
+                    tipo: 'seleccionCarta',
+                    carta: carta
+                }));
+
+                // Mostramos una pequeña notificación
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    background: '#1a472a',
+                    color: '#fff'
+                });
+
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Carta jugada'
+                });
+            }
         }
 
         function mostrarResultado(data) {
