@@ -49,20 +49,34 @@
 
         /* Ajustes responsive */
         @media (max-width: 640px) {
+            /* Cartas del jugador (abajo) */
             .carta {
-                width: 70px !important;
-                height: 98px !important;
+                width: 65px !important;
+                height: 91px !important;
             }
 
-            #cartasCentro .carta {
-                width: 80px !important;
-                height: 112px !important;
+            /* Cartas con back (arriba) reducidas */
+            #cartasCentro .carta-back {
+                width: 55px !important;
+                height: 77px !important;
             }
 
+            /* Cartas del centro (jugadas) */
+            #cartasCentro .resultado-carta {
+                width: 65px !important;
+                height: 91px !important;
+            }
+
+            /* Ajustar espaciados */
             #misCartas {
-                gap: 0.5rem;
-                padding: 0.5rem;
-                justify-content: center;
+                gap: 0.3rem;
+                padding: 0.3rem;
+                margin-bottom: 1rem;
+            }
+
+            #cartasCentro {
+                gap: 0.3rem;
+                min-height: 120px;
             }
 
             #estadoJuego {
