@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,181 +11,89 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
 
     <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            background-color: #1a472a;
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .contenedor-juego {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 1rem;
-            max-width: 100%;
-            margin: 0 auto;
-        }
-
-        #cartasCentro {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin: 1rem 0;
-            min-height: 150px;
-        }
-
-        #misCartas {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.5rem;
-            margin-top: auto;
-        }
-
-        .carta {
-            width: 100px;
-            height: 140px;
-            position: relative;
-            perspective: 1000px;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        @media (max-width: 640px) {
-            .carta {
-                width: 70px;
-                height: 98px;
-            }
-
-            #cartasCentro .carta {
-                width: 80px;
-                height: 112px;
-            }
-
-            .contenedor-juego {
-                padding: 0.5rem;
-            }
-        }
-
-        .carta-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            transition: transform 0.6s;
-            transform-style: preserve-3d;
-        }
-
-        .carta img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        #estadoJuego {
-            text-align: center;
-            color: white;
-            font-size: 1.5rem;
-            margin: 1rem 0;
-            padding: 0.5rem;
-            background-color: rgba(0,0,0,0.2);
-            border-radius: 0.5rem;
-        }
-
-        .resultado-carta {
-            animation: aparecer 0.5s ease-out;
-        }
-
-        @keyframes aparecer {
-            from {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        /* Ajustes para SweetAlert en móvil */
-        .swal2-popup {
-            font-size: 0.8rem !important;
-            padding: 0.5rem !important;
-        }
-
-        .swal2-title {
-            font-size: 1.2rem !important;
-        }
-
-        .swal2-content {
-            font-size: 1rem !important;
-        }
-    </style>
 </head>
-<body>
-    <div class="contenedor-juego">
-        <div id="estadoJuego" class="text-xl md:text-2xl">
-            Esperando conexión...
+<body class="bg-gradient-to-b from-green-900 to-green-700 h-screen overflow-hidden">
+    <div class="h-screen flex flex-col gap-1 p-1">
+        <!-- Estado del juego -->
+        <div class="bg-black bg-opacity-80 text-white p-1.5 rounded-xl w-fit mx-auto">
+            <p id="estadoJuego" class="text-center text-base font-semibold">Esperando jugadores...</p>
         </div>
-        
-        <div id="cartasCentro" class="flex justify-center items-center min-h-[150px]"></div>
-        
-        <div id="misCartas" class="grid grid-cols-3 sm:grid-cols-5 gap-2 justify-items-center"></div>
+
+        <!-- Mesa de juego -->
+        <div class="bg-green-700 rounded-2xl shadow-2xl border-2 border-brown-900 flex-1 flex flex-col justify-between p-2">
+            <!-- Cartas del oponente -->
+            <div class="w-full flex-none">
+                <div class="flex justify-center flex-wrap gap-1" id="cartasOponente"></div>
+            </div>
+
+            <!-- Centro de la mesa -->
+            <div class="w-full flex-1 flex items-center justify-center min-h-[100px]">
+                <div class="flex justify-center gap-1" id="cartasCentro"></div>
+            </div>
+
+            <!-- Tus cartas -->
+            <div class="w-full flex-none">
+                <div class="flex justify-center flex-wrap gap-1" id="tusCartas"></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Conexión WebSocket con manejo de errores
         const ws = new WebSocket('wss://joc.yassineelbakali.com');
         let miJugadorId = null;
         let esMiTurno = false;
+      // Añadir manejo de errores
+ws.onerror = (error) => {
+    console.error('Error en WebSocket:', error);
+    Swal.fire({
+        title: 'Error de conexión',
+        text: 'No se pudo conectar al servidor',
+        icon: 'error',
+        confirmButtonText: 'Reintentar',
+        background: '#1a472a',
+        color: '#fff'
+    }).then(() => {
+        window.location.reload();
+    });
+};
 
-        ws.onopen = () => {
-            console.log('Conectado al servidor WebSocket');
-        };
-
-        ws.onerror = (error) => {
-            console.error('Error en WebSocket:', error);
-            Swal.fire({
-                title: 'Error de conexión',
-                text: 'No se pudo conectar al servidor',
-                icon: 'error',
-                confirmButtonText: 'Reintentar',
+ws.onclose = () => {
+    Swal.fire({
+        title: 'Conexión perdida',
+        text: 'Se perdió la conexión con el servidor',
+        icon: 'warning',
+        confirmButtonText: 'Reconectar',
+        background: '#1a472a',
+        color: '#fff'
+    }).then(() => {
+        window.location.reload();
+    });
+};  
+        // Función para mostrar bienvenida
+        async function mostrarBienvenida() {
+            const result = await Swal.fire({
+                title: '¡Bienvenido al Juego de Cartas!',
+                text: '¿Estás listo para jugar?',
+                icon: 'success',
+                confirmButtonText: '¡Empezar!',
+                allowOutsideClick: false,
                 background: '#1a472a',
-                color: '#fff'
-            }).then(() => {
-                window.location.reload();
+                color: '#fff',
+                confirmButtonColor: '#2d6a4f'
             });
-        };
+        }
 
-        ws.onclose = () => {
-            console.log('Conexión cerrada');
-            Swal.fire({
-                title: 'Conexión perdida',
-                text: 'Se perdió la conexión con el servidor',
-                icon: 'warning',
-                confirmButtonText: 'Reconectar',
-                background: '#1a472a',
-                color: '#fff'
-            }).then(() => {
-                window.location.reload();
-            });
-        };
-
+        // Mostrar bienvenida al cargar la página
+        mostrarBienvenida();
+        
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            console.log('Mensaje recibido:', data); // Debug
             
             switch(data.tipo) {
                 case 'conexion':
                     miJugadorId = data.jugadorId;
                     esMiTurno = data.turnoActual === miJugadorId;
+                    
                     if (miJugadorId === 0) {
                         Swal.fire({
                             title: 'Esperando oponente',
@@ -196,41 +104,27 @@
                             background: '#1a472a',
                             color: '#fff'
                         });
-                    } else {
-                        Swal.fire({
-                            title: '¡Partida lista!',
-                            text: 'Eres el Jugador 2',
-                            icon: 'success',
-                            timer: 1500,
-                            background: '#1a472a',
-                            color: '#fff'
-                        });
                     }
-                    break;
-
-                case 'inicioJuego':
-                    console.log('Iniciando juego...'); // Debug
-                    Swal.close();
-                    mostrarCartas(data.mano);
-                    esMiTurno = data.turnoActual === miJugadorId;
                     actualizarEstado();
                     break;
 
-                case 'resultado':
-                    mostrarResultado(data);
+                case 'inicioJuego':
+                    Swal.close(); // Cerrar el mensaje de espera si está visible
+                    
+                    // Mostrar mensaje de inicio para ambos jugadores
                     Swal.fire({
-                        title: data.ganador === 'empate' ? '¡Empate!' : 
-                               `¡Gana Jugador ${data.ganador + 1}!`,
-                        text: data.ganador === miJugadorId ? '¡Has ganado!' : 
-                              data.ganador === 'empate' ? 'Nadie gana' : 'Has perdido',
-                        icon: data.ganador === miJugadorId ? 'success' : 
-                              data.ganador === 'empate' ? 'info' : 'error',
-                        timer: 2000,
+                        title: '¡Partida lista!',
+                        text: `Eres el Jugador ${miJugadorId + 1}`,
+                        icon: 'success',
+                        timer: 1500,
                         showConfirmButton: false,
                         background: '#1a472a',
-                        color: '#fff',
-                        position: 'top'
+                        color: '#fff'
                     });
+
+                    mostrarCartas(data.mano);
+                    esMiTurno = data.turnoActual === miJugadorId;
+                    actualizarEstado();
                     break;
 
                 case 'cambioTurno':
@@ -251,6 +145,26 @@
                             title: '¡Tu turno!'
                         });
                     }
+                    break;
+
+                case 'resultado':
+                    const resultado = data.ganador === 'empate' ? 
+                        '¡Empate!' : 
+                        `¡Gana Jugador ${data.ganador + 1}!`;
+                    
+                    mostrarResultado(data);
+                    
+                    Swal.fire({
+                        title: resultado,
+                        text: 'Preparando siguiente ronda...',
+                        icon: data.ganador === miJugadorId ? 'success' : 
+                              data.ganador === 'empate' ? 'info' : 'error',
+                        timer: 1500,
+                        showConfirmButton: false,
+                        background: '#1a472a',
+                        color: '#fff',
+                        position: 'top'
+                    });
                     break;
 
                 case 'error':
@@ -281,7 +195,7 @@
 
         function actualizarEstado() {
             const estado = document.getElementById('estadoJuego');
-            if (miJugadorId === 0 && !esMiTurno && document.getElementById('misCartas').children.length === 0) {
+            if (miJugadorId === 0 && !esMiTurno && document.getElementById('tusCartas').children.length === 0) {
                 estado.textContent = 'Esperando oponente...';
             } else if (esMiTurno) {
                 estado.textContent = '🎮 Tu turno';
@@ -291,7 +205,7 @@
         }
 
         function mostrarCartas(mano) {
-            const tusCartas = document.getElementById('misCartas');
+            const tusCartas = document.getElementById('tusCartas');
             tusCartas.innerHTML = '';
             
             mano.forEach(carta => {
