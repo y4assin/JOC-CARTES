@@ -92,14 +92,7 @@ wss.on('connection', (ws) => {
     }));
 
     if (juego.jugadores.length === 2) {
-        const manos = juego.repartirCartas();
-        juego.jugadores.forEach((jugador, id) => {
-            jugador.send(JSON.stringify({
-                tipo: 'inicioJuego',
-                mano: manos[id],
-                turnoActual: juego.turnoActual
-            }));
-        });
+        repartirNuevaRonda();
     }
 
     ws.on('message', (mensaje) => {
@@ -116,10 +109,8 @@ wss.on('connection', (ws) => {
 
             juego.cartasSeleccionadas.set(ws.jugadorId, data.carta);
             
-            // Cambiar turno
             juego.turnoActual = (juego.turnoActual + 1) % 2;
             
-            // Notificar a todos del cambio de turno
             juego.jugadores.forEach((jugador) => {
                 jugador.send(JSON.stringify({
                     tipo: 'cambioTurno',
@@ -132,12 +123,7 @@ wss.on('connection', (ws) => {
                 const carta2 = juego.cartasSeleccionadas.get(1);
                 const resultado = juego.determinarGanador(carta1, carta2);
                 
-                console.log('Resultado:', {
-                    carta1: `${carta1.valor}-${carta1.palo}`,
-                    carta2: `${carta2.valor}-${carta2.palo}`,
-                    ganador: resultado
-                });
-                
+                // Primero solo enviamos el resultado
                 juego.jugadores.forEach((jugador) => {
                     jugador.send(JSON.stringify({
                         tipo: 'resultado',
@@ -148,16 +134,48 @@ wss.on('connection', (ws) => {
                         }
                     }));
                 });
-                
-                juego.cartasSeleccionadas.clear();
-                juego.turnoActual = 0; // Reiniciar turno para la siguiente ronda
+
+                // Esperamos 2 segundos para mostrar el resultado
+                setTimeout(() => {
+                    juego.cartasSeleccionadas.clear();
+                    juego.turnoActual = 0;
+                    const nuevasManos = juego.repartirCartas();
+                    
+                    // Luego enviamos las nuevas cartas
+                    juego.jugadores.forEach((jugador, id) => {
+                        jugador.send(JSON.stringify({
+                            tipo: 'nuevaRonda',
+                            mano: nuevasManos[id],
+                            turnoActual: 0
+                        }));
+                    });
+                }, 2000);
             }
         }
     });
 
+    function repartirNuevaRonda() {
+        const manos = juego.repartirCartas();
+        juego.jugadores.forEach((jugador, id) => {
+            jugador.send(JSON.stringify({
+                tipo: 'nuevaRonda',
+                mano: manos[id],
+                turnoActual: juego.turnoActual
+            }));
+        });
+    }
+
     ws.on('close', () => {
         juego.jugadores = juego.jugadores.filter(j => j !== ws);
         juego.cartasSeleccionadas.delete(ws.jugadorId);
+        
+        // Notificar a los jugadores restantes
+        juego.jugadores.forEach((jugador) => {
+            jugador.send(JSON.stringify({
+                tipo: 'jugadorDesconectado',
+                mensaje: 'El otro jugador se ha desconectado'
+            }));
+        });
     });
 });
 

@@ -7,37 +7,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <div class="min-h-screen bg-green-800 p-8">
-        <div class="max-w-7xl mx-auto">
-            <div class="relative h-[600px] bg-green-700 rounded-[100px] shadow-2xl border-8 border-brown-900 p-8">
-                
-                <!-- Cartas del oponente -->
-                <div class="absolute top-4 left-1/2 transform -translate-x-1/2">
-                    <div class="flex gap-4" id="cartasOponente">
-                        <!-- Cartas del oponente -->
-                    </div>
-                </div>
+<body class="bg-gradient-to-b from-green-900 to-green-700 h-screen overflow-hidden">
+    <div class="h-screen flex flex-col p-4">
+        <!-- Estado del juego -->
+        <div class="bg-black bg-opacity-80 text-white p-3 rounded-xl mb-4 w-fit mx-auto">
+            <p id="estadoJuego" class="text-center text-lg font-semibold">Esperando jugadores...</p>
+        </div>
 
-                <!-- Centro de la mesa -->
-                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div class="flex gap-4" id="cartasCentro">
-                        <!-- Cartas jugadas -->
-                    </div>
-                </div>
+        <!-- Mesa de juego -->
+        <div class="relative bg-green-700 rounded-3xl shadow-2xl border-8 border-brown-900 flex-grow">
+            <!-- Cartas del oponente -->
+            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 w-full px-4">
+                <div class="flex justify-center gap-2" id="cartasOponente"></div>
+            </div>
 
-                <!-- Tus cartas -->
-                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                    <div class="flex gap-4" id="tusCartas">
-                        <!-- Tus cartas -->
-                    </div>
-                </div>
+            <!-- Centro de la mesa -->
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full px-4">
+                <div class="flex justify-center gap-2" id="cartasCentro"></div>
+            </div>
 
-                <!-- Estado del juego -->
-                <div class="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-4 rounded-xl">
-                    <h2 class="text-xl font-bold mb-2">Estado del Juego</h2>
-                    <p id="estadoJuego">Esperando jugadores...</p>
-                </div>
+            <!-- Tus cartas -->
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-full px-4">
+                <div class="flex justify-center gap-2" id="tusCartas"></div>
             </div>
         </div>
     </div>
@@ -50,32 +41,57 @@
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
-            if (data.tipo === 'conexion') {
-                miJugadorId = data.jugadorId;
-                esMiTurno = data.turnoActual === miJugadorId;
-                document.getElementById('estadoJuego').textContent = 
-                    `Eres el Jugador ${miJugadorId + 1}. ${miJugadorId === 0 ? 'Esperando oponente...' : ''}`;
-            }
-            else if (data.tipo === 'inicioJuego') {
-                mostrarCartas(data.mano);
-                esMiTurno = data.turnoActual === miJugadorId;
-                actualizarEstado();
-            }
-            else if (data.tipo === 'cambioTurno') {
-                esMiTurno = data.turnoActual === miJugadorId;
-                actualizarEstado();
-            }
-            else if (data.tipo === 'resultado') {
-                mostrarResultado(data);
-            }
-            else if (data.tipo === 'error') {
-                alert(data.mensaje);
+            switch(data.tipo) {
+                case 'conexion':
+                    miJugadorId = data.jugadorId;
+                    esMiTurno = data.turnoActual === miJugadorId;
+                    document.getElementById('estadoJuego').textContent = 
+                        `Jugador ${miJugadorId + 1} ${miJugadorId === 0 ? '- Esperando oponente' : ''}`;
+                    break;
+
+                case 'inicioJuego':
+                    mostrarCartas(data.mano);
+                    esMiTurno = data.turnoActual === miJugadorId;
+                    actualizarEstado();
+                    break;
+
+                case 'resultado':
+                    mostrarResultado(data);
+                    // Limpiar las cartas del oponente
+                    document.getElementById('cartasOponente').innerHTML = '';
+                    break;
+
+                case 'nuevaRonda':
+                    // Limpiar el centro de la mesa
+                    document.getElementById('cartasCentro').innerHTML = '';
+                    mostrarCartas(data.mano);
+                    esMiTurno = data.turnoActual === miJugadorId;
+                    actualizarEstado();
+                    break;
+
+                case 'cambioTurno':
+                    esMiTurno = data.turnoActual === miJugadorId;
+                    actualizarEstado();
+                    break;
+
+                case 'jugadorDesconectado':
+                    alert(data.mensaje);
+                    location.reload();
+                    break;
+
+                case 'error':
+                    alert(data.mensaje);
+                    break;
             }
         };
 
         function actualizarEstado() {
-            document.getElementById('estadoJuego').textContent = 
-                esMiTurno ? 'Tu turno - Selecciona una carta' : 'Turno del oponente';
+            const estado = document.getElementById('estadoJuego');
+            if (esMiTurno) {
+                estado.textContent = '🎮 Tu turno - Selecciona una carta';
+            } else {
+                estado.textContent = '⌛ Esperando al oponente';
+            }
         }
 
         function mostrarCartas(mano) {
@@ -148,7 +164,7 @@
             
             const resultado = data.ganador === 'empate' ? 
                 '¡Empate!' : 
-                `Ganador: Jugador ${data.ganador + 1}`;
+                `¡Gana Jugador ${data.ganador + 1}!`;
             document.getElementById('estadoJuego').textContent = resultado;
         }
     </script>
