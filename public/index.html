@@ -38,6 +38,59 @@
         </div>
     </div>
 
+    <style>
+        /* Estilos base existentes */
+        body {
+            background-color: #1a472a;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Ajustes responsive */
+        @media (max-width: 640px) {
+            .carta {
+                width: 70px !important;
+                height: 98px !important;
+            }
+
+            #cartasCentro .carta {
+                width: 80px !important;
+                height: 112px !important;
+            }
+
+            #misCartas {
+                gap: 0.5rem;
+                padding: 0.5rem;
+                justify-content: center;
+            }
+
+            #estadoJuego {
+                font-size: 1.2rem;
+                padding: 0.5rem;
+            }
+        }
+
+        /* Ajustes SweetAlert para móvil */
+        .swal2-popup {
+            font-size: 0.9rem !important;
+            padding: 1rem !important;
+        }
+
+        .swal2-title {
+            font-size: 1.3rem !important;
+        }
+
+        .swal2-content {
+            font-size: 1rem !important;
+        }
+
+        .swal2-confirm, .swal2-cancel {
+            padding: 0.5rem 1rem !important;
+            font-size: 0.9rem !important;
+        }
+    </style>
+
     <script>
         const ws = new WebSocket('wss://joc.yassineelbakali.com');
         let miJugadorId = null;
