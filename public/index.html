@@ -139,6 +139,7 @@ ws.onclose = () => {
         window.location.reload();
     });
 };  
+
         // Función para mostrar bienvenida
         async function mostrarBienvenida() {
             const result = await Swal.fire({
@@ -301,9 +302,7 @@ ws.onclose = () => {
                         dorsoElement.style.display = 'none';
                         frenteElement.style.display = 'block';
                         
-                        setTimeout(() => {
-                            seleccionarCarta(carta);
-                        }, 500);
+                        seleccionarCarta(carta, dorsoElement, frenteElement);
                     }
                 };
                 
@@ -341,7 +340,7 @@ ws.onclose = () => {
         }
 
         // Función para confirmar selección de carta
-        async function seleccionarCarta(carta) {
+        async function seleccionarCarta(carta, dorsoElement, frenteElement) {
             if (!esMiTurno) {
                 Swal.fire({
                     title: '¡No es tu turno!',
@@ -394,6 +393,10 @@ ws.onclose = () => {
                     icon: 'success',
                     title: 'Carta jugada'
                 });
+            } else {
+                // Si se cancela, volvemos a ocultar la carta
+                dorsoElement.style.display = 'block';
+                frenteElement.style.display = 'none';
             }
         }
 
