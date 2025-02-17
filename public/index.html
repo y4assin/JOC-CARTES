@@ -325,7 +325,7 @@ ws.onclose = () => {
                 cartasOponente.appendChild(cartaVolteada);
             }
         }
-
+            
         function crearElementoCarta(carta) {
             const div = document.createElement('div');
             div.className = 'carta w-32 h-48 hover:cursor-pointer';
@@ -359,13 +359,11 @@ ws.onclose = () => {
                 imageUrl: carta.imagen,
                 imageWidth: 100,
                 imageHeight: 140,
-                showCancelButton: true,
+                showCancelButton: false,
                 confirmButtonText: 'Jugar',
-                cancelButtonText: 'Cancelar',
                 background: '#1a472a',
                 color: '#fff',
-                confirmButtonColor: '#2d6a4f',
-                cancelButtonColor: '#9c4141'
+                confirmButtonColor: '#2d6a4f'
             });
 
             if (result.isConfirmed) {
@@ -393,10 +391,6 @@ ws.onclose = () => {
                     icon: 'success',
                     title: 'Carta jugada'
                 });
-            } else {
-                // Si se cancela, volvemos a ocultar la carta
-                dorsoElement.style.display = 'block';
-                frenteElement.style.display = 'none';
             }
         }
 
