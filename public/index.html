@@ -309,21 +309,9 @@ ws.onclose = () => {
                 tusCartas.appendChild(cartaElement);
             });
 
-            // Mantener el código existente para las cartas del oponente
+            // Limpiamos las cartas del oponente
             const cartasOponente = document.getElementById('cartasOponente');
             cartasOponente.innerHTML = '';
-            for (let i = 0; i < 5; i++) {
-                const cartaVolteada = document.createElement('div');
-                cartaVolteada.className = 'carta volteada';
-                cartaVolteada.innerHTML = `
-                    <div class="carta-inner">
-                        <div class="carta-dorso">
-                            <img src="/cards/BACK.png" alt="dorso" class="w-full h-full rounded-xl">
-                        </div>
-                    </div>
-                `;
-                cartasOponente.appendChild(cartaVolteada);
-            }
         }
             
         function crearElementoCarta(carta) {
