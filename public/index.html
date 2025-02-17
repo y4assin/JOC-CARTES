@@ -129,8 +129,8 @@ ws.onerror = (error) => {
 
 ws.onclose = () => {
     Swal.fire({
-        title: 'Conexión perdida',
-        text: 'Se perdió la conexión con el servidor',
+        title: 'Partida llena',
+        text: 'la partida esta llena, espera a que un jugador se desconecte',
         icon: 'warning',
         confirmButtonText: 'Reconectar',
         background: '#1a472a',
